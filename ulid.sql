@@ -12,6 +12,11 @@ SELECT SYSUTCDATETIME() AS dt
 	,CRYPT_GEN_RANDOM(10) AS rnd
 GO
 
+GRANT SELECT
+	ON [dbo].[ulid_view]
+	TO PUBLIC
+GO
+
 IF NOT EXISTS (
 		SELECT *
 		FROM sys.objects
@@ -41,6 +46,11 @@ BEGIN
 END
 GO
 
+GRANT EXECUTE
+	ON [dbo].[ulid]
+	TO PUBLIC
+GO
+
 IF NOT EXISTS (
 		SELECT *
 		FROM sys.objects
@@ -63,9 +73,7 @@ ALTER FUNCTION [dbo].[base32CrockfordEnc] (
 RETURNS VARCHAR(max)
 AS
 BEGIN
-	/* RFC 4648 compliant BASE32 encoding function, takes varbinary data to 
-	encode as first parameter, and then a 0 or 1 to indicate whether or not
-	padding characters (equals signs) should be included in the output. */
+	/* modified BASE32 encoding as definied by Crockford at http://www.crockford.com/wrmg/base32.html */
 	DECLARE @p INT
 	DECLARE @c BIGINT
 	DECLARE @s BIGINT
@@ -92,7 +100,7 @@ BEGIN
 		WHILE @s < 8
 		BEGIN
 			SET @q = @t % 32
-			SET @op = @op + SUBSTRING(@alpha, @q + 1, 1)
+			SET @op = SUBSTRING(@alpha, @q + 1, 1) + @op
 			SET @t = @t / 32
 			SET @s = @s + 1
 		END
@@ -160,7 +168,6 @@ BEGIN
 	DECLARE @alpha CHAR(32)
 
 	SET @alpha = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
-
 	SET @o = CAST('' AS VARBINARY(max))
 	SET @p = 0 --initialize padding character count
 		--we can strip off padding characters since BASE32 is unambiguous without them
@@ -182,7 +189,7 @@ BEGIN
 		WHILE @s < 8 --accumulate 8 characters (40 bits) at a time in a bigint
 		BEGIN
 			SET @t = @t * 32
-			SET @t = @t + (CHARINDEX(SUBSTRING(@x, @c, 1),@alpha,1) -1)
+			SET @t = @t + (CHARINDEX(SUBSTRING(@x, @c, 1), @alpha, 1) - 1)
 			SET @s = @s + 1
 			SET @c = @c + 1
 		END
@@ -209,6 +216,31 @@ GO
 
 GRANT EXECUTE
 	ON [dbo].[base32CrockfordDec]
+	TO PUBLIC
+GO
+
+IF NOT EXISTS (
+		SELECT *
+		FROM sys.objects
+		WHERE object_id = OBJECT_ID(N'[dbo].[ulidStr]')
+		)
+	EXEC dbo.sp_executesql @statement = N'CREATE FUNCTION [dbo].[ulidStr]() RETURNS VARCHAR(100) AS BEGIN RETURN NULL END'
+GO
+
+ALTER FUNCTION [dbo].[ulidStr] ()
+RETURNS VARCHAR(100)
+AS
+BEGIN
+	DECLARE @temp BINARY (16)
+
+	SET @temp = CAST(dbo.ulid() AS BINARY (16))
+
+	RETURN [dbo].[base32CrockfordEnc](SUBSTRING(@temp, 11, 6) + SUBSTRING(@temp, 1, 10), 0)
+END
+GO
+
+GRANT EXECUTE
+	ON [dbo].[ulidStr]
 	TO PUBLIC
 GO
 
