@@ -244,4 +244,35 @@ GRANT EXECUTE
 	TO PUBLIC
 GO
 
+IF NOT EXISTS (
+		SELECT *
+		FROM sys.objects
+		WHERE object_id = OBJECT_ID(N'[dbo].[ulid_seeded]')
+		)
+	EXEC dbo.sp_executesql @statement = N'CREATE FUNCTION [dbo].[ulid_seeded]() RETURNS UNIQUEIDENTIFIER AS BEGIN RETURN NULL END'
+GO
+
+ALTER FUNCTION [dbo].[ulid_seeded] (
+	@dt DATETIME2
+	,@rnd BINARY (10)
+	)
+RETURNS UNIQUEIDENTIFIER
+AS
+BEGIN
+	DECLARE @di BIGINT
+
+	SET @di = DATEDIFF(hour, CAST('1970-01-01 00:00:00' AS DATETIME2), @dt)
+	SET @di = (@di * 60) + DATEPART(minute, @dt)
+	SET @di = (@di * 60) + DATEPART(second, @dt)
+	SET @di = (@di * 1000) + DATEPART(ms, @dt)
+
+	RETURN CAST(@rnd + SUBSTRING(CAST(@di AS BINARY (8)), 3, 6) AS UNIQUEIDENTIFIER)
+END
+GO
+
+GRANT EXECUTE
+	ON [dbo].[ulid_seeded]
+	TO PUBLIC
+GO
+
 

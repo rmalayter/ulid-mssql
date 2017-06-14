@@ -6,11 +6,90 @@ DECLARE @et DATETIME2(7)
 DECLARE @c INT
 DECLARE @cmax INT
 DECLARE @frag FLOAT
+DECLARE @tuid UNIQUEIDENTIFIER
+DECLARE @tbin BINARY (16)
+DECLARE @tstr CHAR(26)
+DECLARE @tdt DATETIME2
 
 --number of rows used in tests
-SET @cmax = 100000
+SET @cmax = 25000
+--component generation test
+SET @c = 0
+SET @st = SYSUTCDATETIME()
 
---ulid as UNIQUEIDENTIFIER test
+WHILE @c < @cmax
+BEGIN
+	SET @tbin = CRYPT_GEN_RANDOM(10)
+	SET @tdt = SYSUTCDATETIME()
+	SET @c = @c + 1
+END
+
+SET @et = SYSUTCDATETIME()
+
+PRINT 'CRYPT_GEN_RANDOM+SYSUTCDATETIME component GENERATION TEST: '
+PRINT '     ids/sec: ' + CAST(CAST(@cmax AS FLOAT) * 1000000 / DATEDIFF(microsecond, @st, @et) AS VARCHAR(100))
+
+--ulid as UNIQUEIDENTIFIER generation test
+SET @c = 0
+SET @st = SYSUTCDATETIME()
+
+WHILE @c < @cmax
+BEGIN
+	SET @tuid = dbo.ulid()
+	SET @c = @c + 1
+END
+
+SET @et = SYSUTCDATETIME()
+
+PRINT 'ulid() as UNIQUEIDENTIFIER GENERATION TEST: '
+PRINT '     ids/sec: ' + CAST(CAST(@cmax AS FLOAT) * 1000000 / DATEDIFF(microsecond, @st, @et) AS VARCHAR(100))
+
+--newid as UNIQUEIDENTIFIER generation test
+SET @c = 0
+SET @st = SYSUTCDATETIME()
+
+WHILE @c < @cmax
+BEGIN
+	SET @tuid = newid()
+	SET @c = @c + 1
+END
+
+SET @et = SYSUTCDATETIME()
+
+PRINT 'newid() as UNIQUEIDENTIFIER GENERATION TEST: '
+PRINT '     ids/sec: ' + CAST(CAST(@cmax AS FLOAT) * 1000000 / DATEDIFF(microsecond, @st, @et) AS VARCHAR(100))
+
+--ulid as NVARCHAR generation test
+SET @c = 0
+SET @st = SYSUTCDATETIME()
+
+WHILE @c < @cmax
+BEGIN
+	SET @tstr = dbo.ulidStr()
+	SET @c = @c + 1
+END
+
+SET @et = SYSUTCDATETIME()
+
+PRINT 'ulidStr() as NVARCHAR GENERATION TEST: '
+PRINT '     ids/sec: ' + CAST(CAST(@cmax AS FLOAT) * 1000000 / DATEDIFF(microsecond, @st, @et) AS VARCHAR(100))
+
+--ulid_seeded generation test
+SET @c = 0
+SET @st = SYSUTCDATETIME()
+
+WHILE @c < @cmax
+BEGIN
+	SET @tuid = dbo.ulid_seeded(SYSUTCDATETIME(),CRYPT_GEN_RANDOM(10))
+	SET @c = @c + 1
+END
+
+SET @et = SYSUTCDATETIME()
+
+PRINT 'ulid_seeded() as UNIQUEIDENTIFIER GENERATION TEST: '
+PRINT '     ids/sec: ' + CAST(CAST(@cmax AS FLOAT) * 1000000 / DATEDIFF(microsecond, @st, @et) AS VARCHAR(100))
+
+--ulid as UNIQUEIDENTIFIER insert test
 CREATE TABLE #t (
 	pk UNIQUEIDENTIFIER PRIMARY KEY CLUSTERED
 	,d NVARCHAR(1000)
@@ -40,7 +119,7 @@ SET @frag = (
 		)
 
 PRINT 'ulid() as primary key INSERTION TEST: '
-PRINT '     rows/sec: ' + CAST(CAST(@cmax AS FLOAT) * 1000 / DATEDIFF(ms, @st, @et) AS VARCHAR(100))
+PRINT '     rows/sec: ' + CAST(CAST(@cmax AS FLOAT) * 1000000 / DATEDIFF(microsecond, @st, @et) AS VARCHAR(100))
 PRINT '     avg_fragmentation_in_percent: ' + CAST(@frag AS VARCHAR(100))
 
 DROP TABLE #t
@@ -75,7 +154,7 @@ SET @frag = (
 		)
 
 PRINT 'newid() as primary key INSERTION TEST: '
-PRINT '     rows/sec: ' + CASt(CAST(@cmax AS FLOAT) * 1000 / DATEDIFF(ms, @st, @et) AS VARCHAR(100))
+PRINT '     rows/sec: ' + CASt(CAST(@cmax AS FLOAT) * 1000000 / DATEDIFF(microsecond, @st, @et) AS VARCHAR(100))
 PRINT '     avg_fragmentation_in_percent: ' + CAST(@frag AS VARCHAR(100))
 
 DROP TABLE #t2
@@ -110,7 +189,7 @@ SET @frag = (
 		)
 
 PRINT 'newsquentialid() as primary key INSERTION TEST: '
-PRINT '     rows/sec: ' + CASt(CAST(@cmax AS FLOAT) * 1000 / DATEDIFF(ms, @st, @et) AS VARCHAR(100))
+PRINT '     rows/sec: ' + CASt(CAST(@cmax AS FLOAT) * 1000000 / DATEDIFF(microsecond, @st, @et) AS VARCHAR(100))
 PRINT '     avg_fragmentation_in_percent: ' + CAST(@frag AS VARCHAR(100))
 
 DROP TABLE #t3
@@ -145,7 +224,7 @@ SET @frag = (
 		)
 
 PRINT 'ulidStr() as primary key INSERTION TEST: '
-PRINT '     rows/sec: ' + CASt(CAST(@cmax AS FLOAT) * 1000 / DATEDIFF(ms, @st, @et) AS VARCHAR(100))
+PRINT '     rows/sec: ' + CASt(CAST(@cmax AS FLOAT) * 1000000 / DATEDIFF(microsecond, @st, @et) AS VARCHAR(100))
 PRINT '     avg_fragmentation_in_percent: ' + CAST(@frag AS VARCHAR(100))
 
 DROP TABLE #t4
